@@ -57,9 +57,7 @@
 
 `*.list` <- function (e1,e2) 
     if (typeof(e1)=="list")
-        if (missing(e2)) 
-            .Internal (lapply (e1,`*`))
-        else if (typeof(e2)=="list") {
+        if (typeof(e2)=="list") {
             stopifnot(length(e1)==length(e2))
             stopifnot(identical(names(e1),names(e2)))
             mapply(`*`,e1,e2,SIMPLIFY=FALSE)
@@ -75,9 +73,7 @@
 
 `/.list` <- function (e1,e2) 
     if (typeof(e1)=="list")
-        if (missing(e2)) 
-            .Internal (lapply (e1,`/`))
-        else if (typeof(e2)=="list") {
+        if (typeof(e2)=="list") {
             stopifnot(length(e1)==length(e2))
             stopifnot(identical(names(e1),names(e2)))
             mapply(`/`,e1,e2,SIMPLIFY=FALSE)
@@ -93,9 +89,7 @@
 
 `^.list` <- function (e1,e2) 
     if (typeof(e1)=="list")
-        if (missing(e2)) 
-            .Internal (lapply (e1,`^`))
-        else if (typeof(e2)=="list") {
+        if (typeof(e2)=="list") {
             stopifnot(length(e1)==length(e2))
             stopifnot(identical(names(e1),names(e2)))
             mapply(`^`,e1,e2,SIMPLIFY=FALSE)
@@ -111,9 +105,7 @@
 
 `%%.list` <- function (e1,e2) 
     if (typeof(e1)=="list")
-        if (missing(e2)) 
-            .Internal (lapply (e1,`%%`))
-        else if (typeof(e2)=="list") {
+        if (typeof(e2)=="list") {
             stopifnot(length(e1)==length(e2))
             stopifnot(identical(names(e1),names(e2)))
             mapply(`%%`,e1,e2,SIMPLIFY=FALSE)
@@ -129,9 +121,7 @@
 
 `%/%.list` <- function (e1,e2) 
     if (typeof(e1)=="list")
-        if (missing(e2)) 
-            .Internal (lapply (e1,`%/%`))
-        else if (typeof(e2)=="list") {
+        if (typeof(e2)=="list") {
             stopifnot(length(e1)==length(e2))
             stopifnot(identical(names(e1),names(e2)))
             mapply(`%/%`,e1,e2,SIMPLIFY=FALSE)
@@ -155,7 +145,7 @@ exp.list <- function (x) .Internal (lapply (x,exp))
 expm1.list <- function (x) .Internal (lapply (x,expm1))
 log1p.list <- function (x) .Internal (lapply (x,log1p))
 log.list <- function (x) .Internal (lapply (x,log))
-lo2.list <- function (x) .Internal (lapply (x,log2))
+log2.list <- function (x) .Internal (lapply (x,log2))
 log10.list <- function (x) .Internal (lapply (x,log10))
 cos.list <- function (x) .Internal (lapply (x,cos))
 sin.list <- function (x) .Internal (lapply (x,sin))

@@ -166,15 +166,44 @@ int R_isnancpp(double x)
 static SEXP unary_listop (SEXP s1, int obj1, SEXP grad1, SEXP env, int variant,
                           const char *listopname)
 {
-    SEXP call, ans;
+    SEXP f, call, ans;
+
     s1 = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
-    PROTECT (call = LCONS (install(listopname),
-                           CONS (mkPROMISE(s1,R_EmptyEnv), R_NilValue)));
+
+    PROTECT (f = install(listopname));
+    PROTECT (call = LCONS (f, CONS (mkPROMISE(s1,R_EmptyEnv), R_NilValue)));
+
     if (variant & VARIANT_GRADIENT)
     { /* .... */
     }
+
     ans = eval(call,env);
-    UNPROTECT(1);
+    UNPROTECT(2);
+    return ans;
+}
+
+static SEXP binary_listop (SEXP s1, SEXP s2, int obj1, int obj2, 
+                           SEXP grad1, SEXP grad2, SEXP env, int variant,
+                           const char *listopname)
+{
+    SEXP f, call, ans;
+
+    s1 = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
+    s1 = mkPROMISE(s1,R_EmptyEnv);
+    PROTECT(s1);
+    s2 = isObject(s2) && !obj2 ? Rf_makeUnclassed(s2) : s2;
+    s2 = mkPROMISE(s2,R_EmptyEnv);
+    PROTECT(s2);
+
+    PROTECT (f = install(listopname));
+    PROTECT (call = LCONS (f, CONS (s1, CONS (s2, R_NilValue))));
+
+    if (variant & VARIANT_GRADIENT)
+    { /* .... */
+    }
+
+    ans = eval(call,env);
+    UNPROTECT(4);
     return ans;
 }
 
@@ -1224,6 +1253,9 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 #define T_arithmetic THRESHOLD_ADJUST(500)  /* >= 16, further adjusted below */
 
+static const char *arith_list_method[IDIVOP+1] =
+  { 0, "+.list", "-.list", "*.list", "/.list", "^.list", "%%.list", "%/%.list" };
+
 SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y, 
                                 int objx, int objy, SEXP grad1, SEXP grad2,
                                 SEXP env, int variant)
@@ -1241,8 +1273,16 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
     PROTECT_WITH_INDEX(y, &ypi);
     nprotect = 2;
 
-    if (!isNumberOrFactor(x) || !isNumberOrFactor(y))
+    if (!isNumberOrFactor(x) || !isNumberOrFactor(y)) {
+        if (TYPEOF(x) == VECSXP || TYPEOF(y) == VECSXP) {
+            if (opcode < 1 || opcode > IDIVOP) abort();
+            ans = binary_listop (x, y, objx, objy, grad1, grad2, env, variant,
+                                 arith_list_method[opcode]);
+            UNPROTECT(2);
+            return ans;
+        }
         errorcall(call, _("non-numeric argument to binary operator"));
+    }
 
     nx = LENGTH(x);
     if (HAS_ATTRIB(x)) {
