@@ -39,9 +39,13 @@
         on elements, elements of elements, etc.
         For binary operations, the two operands must be lists that match 
         exactly in length and names, or one operand must be a scalar.
-        Similarly, mathematical functions of one argument may now be
-        applied to lists, with the results computed recursively. This 
-        facility is preliminary and might change in future.
+
+        Similarly, the base mathematical functions of one argument may
+        now be applied to lists, with the results computed
+        recursively. The two-argument functions \code{log},
+        \code{atan2}, \code{round}, and \code{signif} can also be
+        applied to lists (as either or both arguments, or as the single
+        argument if the second defaults).
   }}
 
   \subsection{BUG FIXES}{

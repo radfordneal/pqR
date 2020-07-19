@@ -135,16 +135,85 @@
         .Internal (lapply (e2, function (x) e1%/%x))
     }
 
+`atan2.list` <- function (y,x) 
+    if (typeof(y)=="list")
+        if (typeof(x)=="list") {
+            stopifnot(length(y)==length(x))
+            stopifnot(identical(names(y),names(x)))
+            mapply(`atan2`,y,x,SIMPLIFY=FALSE)
+        }
+        else {
+            stopifnot(length(x)==1)
+            .Internal (lapply (y, function (z) atan2(z,x)))
+        }
+    else {
+        stopifnot(length(y)==1)
+        .Internal (lapply (x, function (z) atan2(y,z)))
+    }
+
+`round.list` <- function (x,digits) 
+    if (typeof(x)=="list")
+        if (missing(digits)) 
+            .Internal (lapply (x,`round`))
+        else if (typeof(digits)=="list") {
+            stopifnot(length(x)==length(digits))
+            stopifnot(identical(names(x),names(digits)))
+            mapply(`round`,x,digits,SIMPLIFY=FALSE)
+        }
+        else {
+            stopifnot(length(digits)==1)
+            .Internal (lapply (x, function (z) round(z,digits)))
+        }
+    else {
+        stopifnot(length(x)==1)
+        .Internal (lapply (digits, function (z) round(x,z)))
+    }
+
+`signif.list` <- function (x,digits) 
+    if (typeof(x)=="list")
+        if (missing(digits)) 
+            .Internal (lapply (x,`signif`))
+        else if (typeof(digits)=="list") {
+            stopifnot(length(x)==length(digits))
+            stopifnot(identical(names(x),names(digits)))
+            mapply(`signif`,x,digits,SIMPLIFY=FALSE)
+        }
+        else {
+            stopifnot(length(digits)==1)
+            .Internal (lapply (x, function (z) signif(z,digits)))
+        }
+    else {
+        stopifnot(length(x)==1)
+        .Internal (lapply (digits, function (z) signif(x,z)))
+    }
+
+`log.list` <- function (x,base) 
+    if (typeof(x)=="list")
+        if (missing(base)) 
+            .Internal (lapply (x,`log`))
+        else if (typeof(base)=="list") {
+            stopifnot(length(x)==length(base))
+            stopifnot(identical(names(x),names(base)))
+            mapply(`log`,x,base,SIMPLIFY=FALSE)
+        }
+        else {
+            stopifnot(length(base)==1)
+            .Internal (lapply (x, function (z) log(z,base)))
+        }
+    else {
+        stopifnot(length(x)==1)
+        .Internal (lapply (base, function (z) log(x,z)))
+    }
+
 abs.list <- function (x) .Internal (lapply (x,abs))
 floor.list <- function (x) .Internal (lapply (x,floor))
 ceiling.list <- function (x) .Internal (lapply (x,ceiling))
 sqrt.list <- function (x) .Internal (lapply (x,sqrt))
 sign.list <- function (x) .Internal (lapply (x,sign))
-trunc.list <- function (x) .Internal (lapply (x,trunc))
+trunc.list <- function (x,...) .Internal (lapply (x,trunc)) # accesses ...
 exp.list <- function (x) .Internal (lapply (x,exp))
 expm1.list <- function (x) .Internal (lapply (x,expm1))
 log1p.list <- function (x) .Internal (lapply (x,log1p))
-log.list <- function (x) .Internal (lapply (x,log))
 log2.list <- function (x) .Internal (lapply (x,log2))
 log10.list <- function (x) .Internal (lapply (x,log10))
 cos.list <- function (x) .Internal (lapply (x,cos))

@@ -163,15 +163,15 @@ int R_isnancpp(double x)
 
 /* Support for arithmetic operations on lists. */
 
-static SEXP unary_listop (SEXP s1, int obj1, SEXP grad1, SEXP env, int variant,
-                          const char *listopname)
+static SEXP unary_listop (SEXP s1, int obj1, SEXP grad1, SEXP remargs,
+                          SEXP env, int variant, const char *listopname)
 {
     SEXP f, call, ans;
 
     s1 = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
 
     PROTECT (f = install(listopname));
-    PROTECT (call = LCONS (f, CONS (mkPROMISE(s1,R_EmptyEnv), R_NilValue)));
+    PROTECT (call = LCONS (f, CONS (mkPROMISE(s1,R_EmptyEnv), remargs)));
 
     if (variant & VARIANT_GRADIENT)
     { /* .... */
@@ -1866,7 +1866,7 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
 
     if ( ! ((NUMBER_TYPES >> type) & 1)) {
         if (type == VECSXP)
-            return unary_listop (s1, obj1, grad1, env, variant,
+            return unary_listop (s1, obj1, grad1, R_NilValue, env, variant,
                                  opcode==PLUSOP ? "+.list" : "-.list");
         errorcall(call, _("invalid argument to unary operator"));
     }
@@ -2399,7 +2399,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
     if (!isNumeric(sa)) {
         if (TYPEOF(sa) == VECSXP) {
-            r = unary_listop (sa, OBJECT(sa), grad, env, variant,
+            r = unary_listop (sa, OBJECT(sa), grad, CDR(args), env, variant,
                               math1_list_method[opcode]);
             UNPROTECT(2);
             return r;
@@ -2576,7 +2576,10 @@ static SEXP nonsimple_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (length(CADR(args)) == 0)
         errorcall(call, _("invalid argument 'base' of length 0"));
 
-    if (isComplex(CAR(args)) || isComplex(CADR(args)))
+    int complex1 = isComplex(CAR(args));
+    int complex2 = isComplex(CADR(args));
+    if (complex1 && complex2 || complex1 && isNumeric(CADR(args))
+                             || complex2 && isNumeric(CAR(args)))
         res = complex_math2(call, op, args, env);
     else
         res = do_math2 (call, op, args, env);
@@ -3130,8 +3133,17 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP a1 = CAR(args); SEXP g1 = GRADIENT_IN_CELL(args); args = CDR(args);
     SEXP a2 = CAR(args); SEXP g2 = GRADIENT_IN_CELL(args); args = CDR(args);
 
-    if (!isNumeric(a1) || !isNumeric(a2))
+    if ((!isNumeric(a1) || !isNumeric(a2)) && (ix==1 /*atan2*/ ||
+          ix==27 /*round*/ || ix==30 /*signif*/ || ix==29 /*log*/)) {
+        if (TYPEOF(a1) == VECSXP || TYPEOF(a2) == VECSXP) {
+            const char *f = ix==1 ? "atan2.list" :
+                            ix==27 ? "round.list" :
+                            ix==30 ? "signif.list" :
+                            ix==29 ? "log.list" : 0;
+            return binary_listop (a1, a2, FALSE, FALSE, g1, g2, env, 0, f);
+        }
         non_numeric_errorcall(call);
+    }
 
     R_len_t n1 = LENGTH(a1);
     R_len_t n2 = LENGTH(a2);
