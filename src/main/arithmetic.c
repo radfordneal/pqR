@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
+ *  Copyright (C) 2013-2020 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -158,6 +158,24 @@ int R_finite(double x)
 int R_isnancpp(double x)
 {
    return ISNAN(x);
+}
+
+
+/* Support for arithmetic operations on lists. */
+
+static SEXP unary_listop (SEXP s1, int obj1, SEXP grad1, SEXP env, int variant,
+                          const char *listopname)
+{
+    SEXP call, ans;
+    s1 = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
+    PROTECT (call = LCONS (install(listopname),
+                           CONS (mkPROMISE(s1,R_EmptyEnv), R_NilValue)));
+    if (variant & VARIANT_GRADIENT)
+    { /* .... */
+    }
+    ans = eval(call,env);
+    UNPROTECT(1);
+    return ans;
 }
 
 
@@ -1811,18 +1829,9 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
         errorcall(call, _("invalid unary operator"));
 
     if ( ! ((NUMBER_TYPES >> type) & 1)) {
-        if (type == VECSXP) {
-            SEXP call;
-            s1 = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
-            PROTECT (call = LCONS (install(opcode==PLUSOP ? "+.list" : "-.list"),
-                                   CONS (mkPROMISE(s1,R_EmptyEnv), R_NilValue)));
-            if (variant & VARIANT_GRADIENT)
-            { /* .... */
-            }
-            ans = eval(call,env);
-            UNPROTECT(1);
-            return ans;
-        }
+        if (type == VECSXP)
+            return unary_listop (s1, obj1, grad1, env, variant,
+                                 opcode==PLUSOP ? "+.list" : "-.list");
         errorcall(call, _("invalid argument to unary operator"));
     }
 
@@ -1931,7 +1940,25 @@ const char R_math1_err_table[44] = {
 /* 10 */        0,      0,      2,      2,      2,      2,      0,0,0,0,
 /* 20 */        1,      1,      1,      2,      2,      0,      0,0,0,0,
 /* 30 */        0,      0,      0,      2,      0,      2,      0,0,0,0,
-/* 40 */        3,      3,      2,      -1
+/* 40 */        3,      3,      2,      2
+};
+
+/* Table of list methods for math1 operations.
+
+   Entries correspond to those in R_math1_func_table above. */
+
+static const char *math1_list_method[44] = {
+/*         0            1            2            3            4            5 */
+ "abs.list", "floor.list","ceiling.list","sqrt.list","sign.list","trunc.list",
+ 0,0,0,0,
+ "exp.list","expm1.list","lop1p.list",  "log.list", "log2.list","log10.list",
+ 0,0,0,0,
+ "cos.list",  "sin.list",  "tan.list", "acos.list", "asin.list", "atan.list",
+ 0,0,0,0,
+"cosh.list", "sinh.list", "tanh.list","acosh.list","asinh.list","atanh.list",
+ 0,0,0,0,
+"lgamma.list","gamma.list","digamma.list","trigamma.list"
+/*         0            1            2            3            4            5 */
 };
 
 int R_naflag;  /* Set to one (in master) for the "NAs produced" warning */
@@ -2338,7 +2365,15 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         return r;
     }
 
-    if (!isNumeric(sa)) non_numeric_errorcall(call);
+    if (!isNumeric(sa)) {
+        if (TYPEOF(sa) == VECSXP) {
+            r = unary_listop (sa, OBJECT(sa), grad, env, variant,
+                              math1_list_method[opcode]);
+            UNPROTECT(2);
+            return r;
+        }
+        non_numeric_errorcall(call);
+    }
 
     int local_assign = 0;
     SEXP sa0 = sa;

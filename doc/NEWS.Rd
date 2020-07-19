@@ -11,9 +11,9 @@
   \subsection{INTRODUCTION}{
   \itemize{
   \item This release fixes some installation issues, changes the
-        URL of the default pqR package repository, and fixes a few bugs
+        URL of the default pqR package repository, and fixes a few bugs.
 
-  \item This release also has a preliminary implementation of automatic 
+  \item This release also has preliminary implementations of automatic 
         differentiation, and of recursive arithmetic on lists (which is
         especially useful in conjunction with automatic differentiation).
   }}
@@ -59,14 +59,15 @@
         will be like.
 
         Type \code{help(Gradient)} to read documentation on the automatic 
-        differentiation facilities
-  \item One can now do arithmetic (+, -, *, /, ^, %%, %/%) on lists 
-        (and lists of lists, etc.), with the result computed recursively.
+        differentiation facilities.
+  \item One can now do arithmetic (+, -, *, /, ^, \%\%, \%/\%) on lists 
+        (and lists of lists, etc.), with the result computed recursively
+        on elements, elements of elements, etc.
         For binary operations, the two operands must be lists that match 
         exactly in length and names, or one operand must be a scalar.
         Similarly, mathematical functions of one argument may now be
-        lists, with the results computed recursively. This facility is
-        preliminary and might change in future.
+        applied to lists, with the results computed recursively. This 
+        facility is preliminary and might change in future.
   }}
 
   \subsection{BUG FIXES}{
