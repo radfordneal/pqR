@@ -171,13 +171,16 @@ static SEXP unary_listop (SEXP s1, int obj1, SEXP grad1, SEXP remargs,
     s1 = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
 
     PROTECT (f = install(listopname));
-    PROTECT (call = LCONS (f, CONS (mkPROMISE(s1,R_EmptyEnv), remargs)));
+    SEXP prom = mkPROMISE(s1,R_EmptyEnv);
+    SET_PRVALUE_TO_PRCODE(prom);
+    PROTECT (call = LCONS (f, CONS (prom, remargs)));
 
-    if (variant & VARIANT_GRADIENT)
-    { /* .... */
+    if (variant & VARIANT_GRADIENT) {
+        SET_STORE_GRAD (prom, 1);
+        SET_GRADIENT_IN_CELL (prom, grad1);
     }
 
-    ans = eval(call,env);
+    ans = evalv(call,env,variant);
     UNPROTECT(2);
     return ans;
 }
@@ -190,19 +193,25 @@ static SEXP binary_listop (SEXP s1, SEXP s2, int obj1, int obj2,
 
     s1 = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
     s1 = mkPROMISE(s1,R_EmptyEnv);
+    SET_PRVALUE_TO_PRCODE(s1);
     PROTECT(s1);
+
     s2 = isObject(s2) && !obj2 ? Rf_makeUnclassed(s2) : s2;
     s2 = mkPROMISE(s2,R_EmptyEnv);
+    SET_PRVALUE_TO_PRCODE(s2);
     PROTECT(s2);
 
     PROTECT (f = install(listopname));
     PROTECT (call = LCONS (f, CONS (s1, CONS (s2, R_NilValue))));
 
-    if (variant & VARIANT_GRADIENT)
-    { /* .... */
+    if (variant & VARIANT_GRADIENT) {
+        SET_STORE_GRAD (s1, 1);
+        SET_GRADIENT_IN_CELL (s1, grad1);
+        SET_STORE_GRAD (s2, 1);
+        SET_GRADIENT_IN_CELL (s2, grad2);
     }
 
-    ans = eval(call,env);
+    ans = evalv(call,env,variant);
     UNPROTECT(4);
     return ans;
 }
@@ -2716,13 +2725,22 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                               HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT,
                               task_abs, 0, s, x);
         }
+    } 
 
-    } else if (isComplex(x)) {
+    else if (isComplex(x)) {
         WAIT_UNTIL_COMPUTED(x);
         s = do_fast_cmathfuns (call, op, x, env, variant);
+    }
 
-    } else
+    else {
+        if (TYPEOF(x) == VECSXP) {
+            r = unary_listop (x, OBJECT(x), GRADIENT_IN_CELL(args), R_NilValue,
+                              env, variant, "abs.list");
+            UNPROTECT(1);
+            return r;
+        }
         non_numeric_errorcall(call);
+    }
 
     PROTECT(s);
     maybe_dup_attributes (s, x, variant);
@@ -3148,7 +3166,8 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
                             ix==27 ? "round.list" :
                             ix==30 ? "signif.list" :
                             ix==29 ? "log.list" : 0;
-            return binary_listop (a1, a2, FALSE, FALSE, g1, g2, env, 0, f);
+            return binary_listop (a1, a2, OBJECT(a1), OBJECT(a2), g1, g2, 
+                                  env, 0, f);
         }
         non_numeric_errorcall(call);
     }

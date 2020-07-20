@@ -19,216 +19,129 @@
 # R functions implementing arithmetic/mathematical operators/functions on
 # list arguments, recursively applying operations to elements.
 
-`+.list` <- function (e1,e2) 
-    if (typeof(e1)=="list")
-        if (missing(e2)) 
-            .Internal (lapply (e1,`+`))
-        else if (typeof(e2)=="list") {
+local ({ 
+
+template <- quote (function (e1,e2) 
+    if (missing(e2)) {
+        for (i along r) e1[[i]] <- + e1[[i]]
+        e1
+    }
+    else if (typeof(e2)=="list") {
+        if (typeof(e1)=="list") {
             stopifnot(length(e1)==length(e2))
             stopifnot(identical(names(e1),names(e2)))
-            mapply(`+`,e1,e2,SIMPLIFY=FALSE)
+            for (i along e2) e2[[i]] <- e1[[i]] + e2[[i]]
+            a <- attributes(e1)
+            n <- names(a)
+            for (i along a) attr(e2,n[i]) <- a[[i]]
         }
         else {
-            stopifnot(length(e2)==1)
-            .Internal (lapply (e1, function (x) x+e2))
+            stopifnot(length(e1)==1)
+            for (i along e2) e2[[i]] <- e1 + e2[[i]]
         }
-    else {
-        stopifnot(length(e1)==1)
-        .Internal (lapply (e2, function (x) e1+x))
+        e2
     }
+    else {
+        stopifnot(length(e2)==1)
+        for (i along e1) e1[[i]] <- e1[[i]] + e2
+        e1
+    }
+)
 
-`-.list` <- function (e1,e2) 
-    if (typeof(e1)=="list")
-        if (missing(e2)) 
-            .Internal (lapply (e1,`-`))
-        else if (typeof(e2)=="list") {
+assign ("+.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(`+`))))),
+        envir=baseenv())
+
+assign ("-.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(`-`))))),
+        envir=baseenv())
+
+template <- quote (function (e1,e2) 
+    if (typeof(e2)=="list") {
+        if (typeof(e1)=="list") {
             stopifnot(length(e1)==length(e2))
             stopifnot(identical(names(e1),names(e2)))
-            mapply(`-`,e1,e2,SIMPLIFY=FALSE)
+            for (i along e2) e2[[i]] <- e1[[i]] + e2[[i]]
+            a <- attributes(e1)
+            n <- names(a)
+            for (i along a) attr(e2,n[i]) <- a[[i]]
         }
         else {
-            stopifnot(length(e2)==1)
-            .Internal (lapply (e1, function (x) x-e2))
+            stopifnot(length(e1)==1)
+            for (i along e2) e2[[i]] <- e1 + e2[[i]]
         }
-    else {
-        stopifnot(length(e1)==1)
-        .Internal (lapply (e2, function (x) e1-x))
+        e2
     }
-
-`*.list` <- function (e1,e2) 
-    if (typeof(e1)=="list")
-        if (typeof(e2)=="list") {
-            stopifnot(length(e1)==length(e2))
-            stopifnot(identical(names(e1),names(e2)))
-            mapply(`*`,e1,e2,SIMPLIFY=FALSE)
-        }
-        else {
-            stopifnot(length(e2)==1)
-            .Internal (lapply (e1, function (x) x*e2))
-        }
     else {
-        stopifnot(length(e1)==1)
-        .Internal (lapply (e2, function (x) e1*x))
+        stopifnot(length(e2)==1)
+        for (i along e1) e1[[i]] <- e1[[i]] + e2
+        e1
     }
+)
 
-`/.list` <- function (e1,e2) 
-    if (typeof(e1)=="list")
-        if (typeof(e2)=="list") {
-            stopifnot(length(e1)==length(e2))
-            stopifnot(identical(names(e1),names(e2)))
-            mapply(`/`,e1,e2,SIMPLIFY=FALSE)
-        }
-        else {
-            stopifnot(length(e2)==1)
-            .Internal (lapply (e1, function (x) x/e2))
-        }
-    else {
-        stopifnot(length(e1)==1)
-        .Internal (lapply (e2, function (x) e1/x))
-    }
+assign ("*.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(`*`))))),
+        envir=baseenv())
 
-`^.list` <- function (e1,e2) 
-    if (typeof(e1)=="list")
-        if (typeof(e2)=="list") {
-            stopifnot(length(e1)==length(e2))
-            stopifnot(identical(names(e1),names(e2)))
-            mapply(`^`,e1,e2,SIMPLIFY=FALSE)
-        }
-        else {
-            stopifnot(length(e2)==1)
-            .Internal (lapply (e1, function (x) x^e2))
-        }
-    else {
-        stopifnot(length(e1)==1)
-        .Internal (lapply (e2, function (x) e1^x))
-    }
+assign ("/.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(`/`))))),
+        envir=baseenv())
 
-`%%.list` <- function (e1,e2) 
-    if (typeof(e1)=="list")
-        if (typeof(e2)=="list") {
-            stopifnot(length(e1)==length(e2))
-            stopifnot(identical(names(e1),names(e2)))
-            mapply(`%%`,e1,e2,SIMPLIFY=FALSE)
-        }
-        else {
-            stopifnot(length(e2)==1)
-            .Internal (lapply (e1, function (x) x%%e2))
-        }
-    else {
-        stopifnot(length(e1)==1)
-        .Internal (lapply (e2, function (x) e1%%x))
-    }
+assign ("^.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(`^`))))),
+        envir=baseenv())
 
-`%/%.list` <- function (e1,e2) 
-    if (typeof(e1)=="list")
-        if (typeof(e2)=="list") {
-            stopifnot(length(e1)==length(e2))
-            stopifnot(identical(names(e1),names(e2)))
-            mapply(`%/%`,e1,e2,SIMPLIFY=FALSE)
-        }
-        else {
-            stopifnot(length(e2)==1)
-            .Internal (lapply (e1, function (x) x%/%e2))
-        }
-    else {
-        stopifnot(length(e1)==1)
-        .Internal (lapply (e2, function (x) e1%/%x))
-    }
+assign ("%%.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(`%%`))))),
+        envir=baseenv())
 
-`atan2.list` <- function (y,x) 
-    if (typeof(y)=="list")
-        if (typeof(x)=="list") {
-            stopifnot(length(y)==length(x))
-            stopifnot(identical(names(y),names(x)))
-            mapply(`atan2`,y,x,SIMPLIFY=FALSE)
-        }
-        else {
-            stopifnot(length(x)==1)
-            .Internal (lapply (y, function (z) atan2(z,x)))
-        }
-    else {
-        stopifnot(length(y)==1)
-        .Internal (lapply (x, function (z) atan2(y,z)))
-    }
+assign ("%/%.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(`%/%`))))),
+        envir=baseenv())
 
-`round.list` <- function (x,digits) 
-    if (typeof(x)=="list")
-        if (missing(digits)) 
-            .Internal (lapply (x,`round`))
-        else if (typeof(digits)=="list") {
-            stopifnot(length(x)==length(digits))
-            stopifnot(identical(names(x),names(digits)))
-            mapply(`round`,x,digits,SIMPLIFY=FALSE)
-        }
-        else {
-            stopifnot(length(digits)==1)
-            .Internal (lapply (x, function (z) round(z,digits)))
-        }
-    else {
-        stopifnot(length(x)==1)
-        .Internal (lapply (digits, function (z) round(x,z)))
-    }
+assign ("atan2.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(atan2))))),
+        envir=baseenv())
 
-`signif.list` <- function (x,digits) 
-    if (typeof(x)=="list")
-        if (missing(digits)) 
-            .Internal (lapply (x,`signif`))
-        else if (typeof(digits)=="list") {
-            stopifnot(length(x)==length(digits))
-            stopifnot(identical(names(x),names(digits)))
-            mapply(`signif`,x,digits,SIMPLIFY=FALSE)
-        }
-        else {
-            stopifnot(length(digits)==1)
-            .Internal (lapply (x, function (z) signif(z,digits)))
-        }
-    else {
-        stopifnot(length(x)==1)
-        .Internal (lapply (digits, function (z) signif(x,z)))
-    }
+assign ("round.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(round))))),
+        envir=baseenv())
 
-`log.list` <- function (x,base) 
-    if (typeof(x)=="list")
-        if (missing(base)) 
-            .Internal (lapply (x,`log`))
-        else if (typeof(base)=="list") {
-            stopifnot(length(x)==length(base))
-            stopifnot(identical(names(x),names(base)))
-            mapply(`log`,x,base,SIMPLIFY=FALSE)
-        }
-        else {
-            stopifnot(length(base)==1)
-            .Internal (lapply (x, function (z) log(z,base)))
-        }
-    else {
-        stopifnot(length(x)==1)
-        .Internal (lapply (base, function (z) log(x,z)))
-    }
+assign ("signif.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(signif))))),
+        envir=baseenv())
 
-abs.list <- function (x) .Internal (lapply (x,abs))
-floor.list <- function (x) .Internal (lapply (x,floor))
-ceiling.list <- function (x) .Internal (lapply (x,ceiling))
-sqrt.list <- function (x) .Internal (lapply (x,sqrt))
-sign.list <- function (x) .Internal (lapply (x,sign))
-trunc.list <- function (x,...) .Internal (lapply (x,trunc)) # accesses ...
-exp.list <- function (x) .Internal (lapply (x,exp))
-expm1.list <- function (x) .Internal (lapply (x,expm1))
-log1p.list <- function (x) .Internal (lapply (x,log1p))
-log2.list <- function (x) .Internal (lapply (x,log2))
-log10.list <- function (x) .Internal (lapply (x,log10))
-cos.list <- function (x) .Internal (lapply (x,cos))
-sin.list <- function (x) .Internal (lapply (x,sin))
-tan.list <- function (x) .Internal (lapply (x,tan))
-acos.list <- function (x) .Internal (lapply (x,acos))
-asin.list <- function (x) .Internal (lapply (x,asin))
-atan.list <- function (x) .Internal (lapply (x,atan))
-cosh.list <- function (x) .Internal (lapply (x,cosh))
-sinh.list <- function (x) .Internal (lapply (x,sinh))
-tanh.list <- function (x) .Internal (lapply (x,tanh))
-acosh.list <- function (x) .Internal (lapply (x,acosh))
-asinh.list <- function (x) .Internal (lapply (x,asinh))
-atanh.list <- function (x) .Internal (lapply (x,atanh))
-lgamma.list <- function (x) .Internal (lapply (x,lgamma))
-gamma.list <- function (x) .Internal (lapply (x,gamma))
-digamma.list <- function (x) .Internal (lapply (x,digamma))
-trigamma.list <- function (x) .Internal (lapply (x,trigamma))
+assign ("log.list",
+        eval (do.call (substitute, list (template, list(`+`=quote(log))))),
+        envir=baseenv())
+})
+
+trunc.list    <- function (x,...) 
+                 { for (i along x) x[[i]] <- trunc (x[[i]], ...); x }
+
+abs.list      <- function (x) { for (i along x) x[[i]] <- abs (x[[i]]); x }
+floor.list    <- function (x) { for (i along x) x[[i]] <- floor (x[[i]]); x }
+ceiling.list  <- function (x) { for (i along x) x[[i]] <- ceiling (x[[i]]); x }
+sqrt.list     <- function (x) { for (i along x) x[[i]] <- sqrt (x[[i]]); x }
+sign.list     <- function (x) { for (i along x) x[[i]] <- sign (x[[i]]); x }
+exp.list      <- function (x) { for (i along x) x[[i]] <- exp (x[[i]]); x }
+expm1.list    <- function (x) { for (i along x) x[[i]] <- expm1 (x[[i]]); x }
+log1p.list    <- function (x) { for (i along x) x[[i]] <- log1p (x[[i]]); x }
+log2.list     <- function (x) { for (i along x) x[[i]] <- log2 (x[[i]]); x }
+log10.list    <- function (x) { for (i along x) x[[i]] <- log10 (x[[i]]); x }
+cos.list      <- function (x) { for (i along x) x[[i]] <- cos (x[[i]]); x }
+sin.list      <- function (x) { for (i along x) x[[i]] <- sin (x[[i]]); x }
+tan.list      <- function (x) { for (i along x) x[[i]] <- tan (x[[i]]); x }
+acos.list     <- function (x) { for (i along x) x[[i]] <- acos (x[[i]]); x }
+asin.list     <- function (x) { for (i along x) x[[i]] <- asin (x[[i]]); x }
+atan.list     <- function (x) { for (i along x) x[[i]] <- atan (x[[i]]); x }
+cosh.list     <- function (x) { for (i along x) x[[i]] <- cosh (x[[i]]); x }
+sinh.list     <- function (x) { for (i along x) x[[i]] <- sinh (x[[i]]); x }
+tanh.list     <- function (x) { for (i along x) x[[i]] <- tanh (x[[i]]); x }
+acosh.list    <- function (x) { for (i along x) x[[i]] <- acosh (x[[i]]); x }
+asinh.list    <- function (x) { for (i along x) x[[i]] <- asinh (x[[i]]); x }
+atanh.list    <- function (x) { for (i along x) x[[i]] <- atanh (x[[i]]); x }
+lgamma.list   <- function (x) { for (i along x) x[[i]] <- lgamma (x[[i]]); x }
+gamma.list    <- function (x) { for (i along x) x[[i]] <- gamma (x[[i]]); x }
+digamma.list  <- function (x) { for (i along x) x[[i]] <- digamma (x[[i]]); x }
+trigamma.list <- function (x) { for (i along x) x[[i]] <- trigamma (x[[i]]); x }
