@@ -23,37 +23,37 @@ local ({
 
 template <- quote (function (e1,e2) 
     if (missing(e2)) {
-        for (i along r) e1[[i]] <- + e1[[i]]
+        for (i along e1) e1[[i]] <- FUN(e1[[i]])
         e1
     }
     else if (typeof(e2)=="list") {
         if (typeof(e1)=="list") {
             stopifnot(length(e1)==length(e2))
             stopifnot(identical(names(e1),names(e2)))
-            for (i along e2) e2[[i]] <- e1[[i]] + e2[[i]]
+            for (i along e2) e2[[i]] <- FUN(e1[[i]],e2[[i]])
             a <- attributes(e1)
             n <- names(a)
             for (i along a) attr(e2,n[i]) <- a[[i]]
         }
         else {
             stopifnot(length(e1)==1)
-            for (i along e2) e2[[i]] <- e1 + e2[[i]]
+            for (i along e2) e2[[i]] <- FUN(e1,e2[[i]])
         }
         e2
     }
     else {
         stopifnot(length(e2)==1)
-        for (i along e1) e1[[i]] <- e1[[i]] + e2
+        for (i along e1) e1[[i]] <- FUN(e1[[i]],e2)
         e1
     }
 )
 
 assign ("+.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(`+`))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(`+`))))),
         envir=baseenv())
 
 assign ("-.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(`-`))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(`-`))))),
         envir=baseenv())
 
 template <- quote (function (e1,e2) 
@@ -61,58 +61,58 @@ template <- quote (function (e1,e2)
         if (typeof(e1)=="list") {
             stopifnot(length(e1)==length(e2))
             stopifnot(identical(names(e1),names(e2)))
-            for (i along e2) e2[[i]] <- e1[[i]] + e2[[i]]
+            for (i along e2) e2[[i]] <- FUN(e1[[i]],e2[[i]])
             a <- attributes(e1)
             n <- names(a)
             for (i along a) attr(e2,n[i]) <- a[[i]]
         }
         else {
             stopifnot(length(e1)==1)
-            for (i along e2) e2[[i]] <- e1 + e2[[i]]
+            for (i along e2) e2[[i]] <- FUN(e1,e2[[i]])
         }
         e2
     }
     else {
         stopifnot(length(e2)==1)
-        for (i along e1) e1[[i]] <- e1[[i]] + e2
+        for (i along e1) e1[[i]] <- FUN(e1[[i]],e2)
         e1
     }
 )
 
 assign ("*.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(`*`))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(`*`))))),
         envir=baseenv())
 
 assign ("/.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(`/`))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(`/`))))),
         envir=baseenv())
 
 assign ("^.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(`^`))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(`^`))))),
         envir=baseenv())
 
 assign ("%%.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(`%%`))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(`%%`))))),
         envir=baseenv())
 
 assign ("%/%.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(`%/%`))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(`%/%`))))),
         envir=baseenv())
 
 assign ("atan2.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(atan2))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(atan2))))),
         envir=baseenv())
 
 assign ("round.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(round))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(round))))),
         envir=baseenv())
 
 assign ("signif.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(signif))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(signif))))),
         envir=baseenv())
 
 assign ("log.list",
-        eval (do.call (substitute, list (template, list(`+`=quote(log))))),
+        eval (do.call (substitute, list (template, list(FUN=quote(log))))),
         envir=baseenv())
 })
 
