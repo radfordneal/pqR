@@ -333,6 +333,36 @@ $q
 [1] 0.6418539
 
 
+> log(c)
+[[1]]
+[1] 1.131402
+
+$q
+[1] 1.308333
+
+[[3]]
+[[3]][[1]]
+[1] -2.302585
+
+[[3]][[2]]
+[1] -0.1053605
+
+
+> log(c,base=2)
+[[1]]
+[1] 1.632268
+
+$q
+[1] 1.887525
+
+[[3]]
+[[3]][[1]]
+[1] -3.321928
+
+[[3]][[2]]
+[1] -0.1520031
+
+
 > log2(c)
 [[1]]
 [1] 1.632268
@@ -584,5 +614,149 @@ $y
 
 $z
 [1] 1.644934
+
+> 
+> 
+> with gradient (x=0.1) list (a=7*x, b=x^2) * 100
+$a
+[1] 70
+
+$b
+[1] 1
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 700
+
+attr(,"gradient")$b
+[1] 20
+
+> with gradient (x=0.1) 100 * list (a=7*x, b=x^2)
+$a
+[1] 70
+
+$b
+[1] 1
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 700
+
+attr(,"gradient")$b
+[1] 20
+
+> with gradient (x=0.1) - list (a=7*x, b=x^2)
+$a
+[1] -0.7
+
+$b
+[1] -0.01
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] -7
+
+attr(,"gradient")$b
+[1] -0.2
+
+> with gradient (x=0.1) list (a=3, b=x) + list (a=7*x, b=x^2)
+$a
+[1] 3.7
+
+$b
+[1] 0.11
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 7
+
+attr(,"gradient")$b
+[1] 1.2
+
+> with gradient (x=0.1) log (list (x, x^2, x^3))
+[[1]]
+[1] -2.302585
+
+[[2]]
+[1] -4.60517
+
+[[3]]
+[1] -6.907755
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 10
+
+attr(,"gradient")[[2]]
+[1] 20
+
+attr(,"gradient")[[3]]
+[1] 30
+
+> with gradient (x=-0.1,y=0.2) abs (list (x, y, x*y))
+[[1]]
+[1] 0.1
+
+[[2]]
+[1] 0.2
+
+[[3]]
+[1] 0.02
+
+attr(,"gradient")
+attr(,"gradient")$x
+attr(,"gradient")$x[[1]]
+[1] -1
+
+attr(,"gradient")$x[[2]]
+[1] 0
+
+attr(,"gradient")$x[[3]]
+[1] -0.2
+
+
+attr(,"gradient")$y
+attr(,"gradient")$y[[1]]
+[1] 0
+
+attr(,"gradient")$y[[2]]
+[1] 1
+
+attr(,"gradient")$y[[3]]
+[1] 0.1
+
+
+> with gradient (x=-0.1,y=0.2) abs (list (x, y, x*y)) * 10
+[[1]]
+[1] 1
+
+[[2]]
+[1] 2
+
+[[3]]
+[1] 0.2
+
+attr(,"gradient")
+attr(,"gradient")$x
+attr(,"gradient")$x[[1]]
+[1] -10
+
+attr(,"gradient")$x[[2]]
+[1] 0
+
+attr(,"gradient")$x[[3]]
+[1] -2
+
+
+attr(,"gradient")$y
+attr(,"gradient")$y[[1]]
+[1] 0
+
+attr(,"gradient")$y[[2]]
+[1] 10
+
+attr(,"gradient")$y[[3]]
+[1] 1
+
 
 > 

@@ -32,6 +32,8 @@ sign(a)
 exp(b)
 expm1(b)
 log1p(c)
+log(c)
+log(c,base=2)
 log2(c)
 log10(c)
 cos(c)
@@ -50,3 +52,12 @@ lgamma(a)
 gamma(a)
 digamma(a)
 trigamma(a)
+
+
+with gradient (x=0.1) list (a=7*x, b=x^2) * 100
+with gradient (x=0.1) 100 * list (a=7*x, b=x^2)
+with gradient (x=0.1) - list (a=7*x, b=x^2)
+with gradient (x=0.1) list (a=3, b=x) + list (a=7*x, b=x^2)
+with gradient (x=0.1) log (list (x, x^2, x^3))
+with gradient (x=-0.1,y=0.2) abs (list (x, y, x*y))
+with gradient (x=-0.1,y=0.2) abs (list (x, y, x*y)) * 10

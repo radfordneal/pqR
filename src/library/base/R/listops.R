@@ -56,6 +56,10 @@ assign ("-.list",
         eval (do.call (substitute, list (template, list(FUN=quote(`-`))))),
         envir=baseenv())
 
+assign ("log.list",
+        eval (do.call (substitute, list (template, list(FUN=quote(log))))),
+        envir=baseenv())
+
 template <- quote (function (e1,e2) 
     if (typeof(e2)=="list") {
         if (typeof(e1)=="list") {
@@ -109,10 +113,6 @@ assign ("round.list",
 
 assign ("signif.list",
         eval (do.call (substitute, list (template, list(FUN=quote(signif))))),
-        envir=baseenv())
-
-assign ("log.list",
-        eval (do.call (substitute, list (template, list(FUN=quote(log))))),
         envir=baseenv())
 })
 
