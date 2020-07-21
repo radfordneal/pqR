@@ -1992,7 +1992,7 @@ static const char *math1_list_method[44] = {
 /*         0            1            2            3            4            5 */
  "abs.list", "floor.list","ceiling.list","sqrt.list","sign.list","trunc.list",
  0,0,0,0,
- "exp.list","expm1.list","lop1p.list",  "log.list", "log2.list","log10.list",
+ "exp.list","expm1.list","log1p.list",  "log.list", "log2.list","log10.list",
  0,0,0,0,
  "cos.list",  "sin.list",  "tan.list", "acos.list", "asin.list", "atan.list",
  0,0,0,0,

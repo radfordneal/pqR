@@ -1,0 +1,588 @@
+
+pqR version 2.15.1 (2019-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2019 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled, uncompressed pointers.
+
+> # Test arithmetic operations on lists.
+> #
+> # Added for pqR, 2020 Radford M. Neal.
+> 
+> 
+> #gctorture()  # Can enable for testing, but slow
+> 
+> a <- list (x=3, y=c(4,5,-1), z=TRUE)
+> b <- list (x=list(10,20), y=2, z=3)
+> c <- list (3.1,q=3.7,list(0.1,0.9))
+> 
+> +a
+$x
+[1] 3
+
+$y
+[1]  4  5 -1
+
+$z
+[1] 1
+
+> -a
+$x
+[1] -3
+
+$y
+[1] -4 -5  1
+
+$z
+[1] -1
+
+> a+b
+$x
+$x[[1]]
+[1] 13
+
+$x[[2]]
+[1] 23
+
+
+$y
+[1] 6 7 1
+
+$z
+[1] 4
+
+> a-b
+$x
+$x[[1]]
+[1] -7
+
+$x[[2]]
+[1] -17
+
+
+$y
+[1]  2  3 -3
+
+$z
+[1] -2
+
+> a*b
+$x
+$x[[1]]
+[1] 30
+
+$x[[2]]
+[1] 60
+
+
+$y
+[1]  8 10 -2
+
+$z
+[1] 3
+
+> a/b
+$x
+$x[[1]]
+[1] 0.3
+
+$x[[2]]
+[1] 0.15
+
+
+$y
+[1]  2.0  2.5 -0.5
+
+$z
+[1] 0.3333333
+
+> a^b
+$x
+$x[[1]]
+[1] 59049
+
+$x[[2]]
+[1] 3486784401
+
+
+$y
+[1] 16 25  1
+
+$z
+[1] 1
+
+> a%%b
+$x
+$x[[1]]
+[1] 3
+
+$x[[2]]
+[1] 3
+
+
+$y
+[1] 0 1 1
+
+$z
+[1] 1
+
+> a%/%b
+$x
+$x[[1]]
+[1] 0
+
+$x[[2]]
+[1] 0
+
+
+$y
+[1]  2  2 -1
+
+$z
+[1] 0
+
+> 
+> floor(c)
+[[1]]
+[1] 3
+
+$q
+[1] 3
+
+[[3]]
+[[3]][[1]]
+[1] 0
+
+[[3]][[2]]
+[1] 0
+
+
+> ceiling(c)
+[[1]]
+[1] 4
+
+$q
+[1] 4
+
+[[3]]
+[[3]][[1]]
+[1] 1
+
+[[3]][[2]]
+[1] 1
+
+
+> round(c)
+[[1]]
+[1] 3
+
+$q
+[1] 4
+
+[[3]]
+[[3]][[1]]
+[1] 0
+
+[[3]][[2]]
+[1] 1
+
+
+> round(a+b,-1)
+$x
+$x[[1]]
+[1] 10
+
+$x[[2]]
+[1] 20
+
+
+$y
+[1] 10 10  0
+
+$z
+[1] 0
+
+> signif(a+b,1)
+$x
+$x[[1]]
+[1] 10
+
+$x[[2]]
+[1] 20
+
+
+$y
+[1] 6 7 1
+
+$z
+[1] 4
+
+> trunc(c)
+[[1]]
+[1] 3
+
+$q
+[1] 3
+
+[[3]]
+[[3]][[1]]
+[1] 0
+
+[[3]][[2]]
+[1] 0
+
+
+> 
+> abs(a)
+$x
+[1] 3
+
+$y
+[1] 4 5 1
+
+$z
+[1] 1
+
+> sqrt(b)
+$x
+$x[[1]]
+[1] 3.162278
+
+$x[[2]]
+[1] 4.472136
+
+
+$y
+[1] 1.414214
+
+$z
+[1] 1.732051
+
+> sign(a)
+$x
+[1] 1
+
+$y
+[1]  1  1 -1
+
+$z
+[1] 1
+
+> exp(b)
+$x
+$x[[1]]
+[1] 22026.47
+
+$x[[2]]
+[1] 485165195
+
+
+$y
+[1] 7.389056
+
+$z
+[1] 20.08554
+
+> expm1(b)
+$x
+$x[[1]]
+[1] 22025.47
+
+$x[[2]]
+[1] 485165194
+
+
+$y
+[1] 6.389056
+
+$z
+[1] 19.08554
+
+> log1p(c)
+[[1]]
+[1] 1.410987
+
+$q
+[1] 1.547563
+
+[[3]]
+[[3]][[1]]
+[1] 0.09531018
+
+[[3]][[2]]
+[1] 0.6418539
+
+
+> log2(c)
+[[1]]
+[1] 1.632268
+
+$q
+[1] 1.887525
+
+[[3]]
+[[3]][[1]]
+[1] -3.321928
+
+[[3]][[2]]
+[1] -0.1520031
+
+
+> log10(c)
+[[1]]
+[1] 0.4913617
+
+$q
+[1] 0.5682017
+
+[[3]]
+[[3]][[1]]
+[1] -1
+
+[[3]][[2]]
+[1] -0.04575749
+
+
+> cos(c)
+[[1]]
+[1] -0.9991352
+
+$q
+[1] -0.8481
+
+[[3]]
+[[3]][[1]]
+[1] 0.9950042
+
+[[3]][[2]]
+[1] 0.62161
+
+
+> sin(c)
+[[1]]
+[1] 0.04158066
+
+$q
+[1] -0.5298361
+
+[[3]]
+[[3]][[1]]
+[1] 0.09983342
+
+[[3]][[2]]
+[1] 0.7833269
+
+
+> tan(c)
+[[1]]
+[1] -0.04161665
+
+$q
+[1] 0.6247331
+
+[[3]]
+[[3]][[1]]
+[1] 0.1003347
+
+[[3]][[2]]
+[1] 1.260158
+
+
+> acos(c)
+[[1]]
+[1] NaN
+
+$q
+[1] NaN
+
+[[3]]
+[[3]][[1]]
+[1] 1.470629
+
+[[3]][[2]]
+[1] 0.4510268
+
+
+Warning messages:
+1: In acos(x[[i]]) : NaNs produced
+2: In acos(x[[i]]) : NaNs produced
+> asin(c)
+[[1]]
+[1] NaN
+
+$q
+[1] NaN
+
+[[3]]
+[[3]][[1]]
+[1] 0.1001674
+
+[[3]][[2]]
+[1] 1.11977
+
+
+Warning messages:
+1: In asin(x[[i]]) : NaNs produced
+2: In asin(x[[i]]) : NaNs produced
+> atan(a)
+$x
+[1] 1.249046
+
+$y
+[1]  1.3258177  1.3734008 -0.7853982
+
+$z
+[1] 0.7853982
+
+> cosh(b)
+$x
+$x[[1]]
+[1] 11013.23
+
+$x[[2]]
+[1] 242582598
+
+
+$y
+[1] 3.762196
+
+$z
+[1] 10.06766
+
+> sinh(b)
+$x
+$x[[1]]
+[1] 11013.23
+
+$x[[2]]
+[1] 242582598
+
+
+$y
+[1] 3.62686
+
+$z
+[1] 10.01787
+
+> tanh(b)
+$x
+$x[[1]]
+[1] 1
+
+$x[[2]]
+[1] 1
+
+
+$y
+[1] 0.9640276
+
+$z
+[1] 0.9950548
+
+> acosh(a)
+$x
+[1] 1.762747
+
+$y
+[1] 2.063437 2.292432      NaN
+
+$z
+[1] 0
+
+Warning message:
+In acosh(x[[i]]) : NaNs produced
+> asinh(a)
+$x
+[1] 1.818446
+
+$y
+[1]  2.0947125  2.3124383 -0.8813736
+
+$z
+[1] 0.8813736
+
+> atanh(c)
+[[1]]
+[1] NaN
+
+$q
+[1] NaN
+
+[[3]]
+[[3]][[1]]
+[1] 0.1003353
+
+[[3]][[2]]
+[1] 1.472219
+
+
+Warning messages:
+1: In atanh(x[[i]]) : NaNs produced
+2: In atanh(x[[i]]) : NaNs produced
+> lgamma(a)
+$x
+[1] 0.6931472
+
+$y
+[1] 1.791759 3.178054      Inf
+
+$z
+[1] 0
+
+Warning message:
+value out of range in 'lgamma' 
+> gamma(a)
+$x
+[1] 2
+
+$y
+[1]   6  24 NaN
+
+$z
+[1] 1
+
+Warning message:
+In gamma(x[[i]]) : NaNs produced
+> digamma(a)
+$x
+[1] 0.9227843
+
+$y
+[1] 1.256118 1.506118      NaN
+
+$z
+[1] -0.5772157
+
+Warning message:
+In digamma(x[[i]]) : NaNs produced
+> trigamma(a)
+$x
+[1] 0.3949341
+
+$y
+[1] 0.283823 0.221323      Inf
+
+$z
+[1] 1.644934
+
+> 

@@ -18,6 +18,7 @@ test-src-strict-1 = \
 	$(test-src-gct) \
 	bind.R \
 	gradient.R \
+	listops.R \
 	helpers.R \
 	namedcnt.R \
 	var-lookup.R \
