@@ -1,6 +1,7 @@
 % File src/library/base/man/sign.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2020 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{sign}
@@ -10,7 +11,7 @@ sign(x)
 }
 \alias{sign}
 \arguments{
-  \item{x}{a numeric vector}
+  \item{x}{a numeric vector, or list}
 }
 \description{
   \code{sign} returns a vector with the signs of the corresponding
@@ -18,6 +19,8 @@ sign(x)
   if the number is positive, zero, or negative, respectively).
 
   Note that \code{sign} does not operate on complex vectors.
+
+  This function can be applied to a list as described in \code{\link{Listops}}.
 }
 \details{
   This is an \link{internal generic} \link{primitive} function: methods
@@ -25,6 +28,8 @@ sign(x)
   \code{\link[=S3groupGeneric]{Math}} group generic.
 }
 \seealso{
+  \code{\link{Listops}} for behaviour when applied to a list.
+
   \code{\link{abs}}
 }
 \examples{

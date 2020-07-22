@@ -1,7 +1,7 @@
 % File src/library/base/man/Log.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
-% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2013, 2020 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{log}
@@ -25,9 +25,10 @@ exp(x)
 expm1(x)
 }
 \arguments{
-  \item{x}{a numeric or complex vector.}
-  \item{base}{a positive or complex number: the base with respect to which
-    logarithms are computed.  Defaults to \eqn{e}=\code{exp(1)}.}
+  \item{x}{a numeric or complex vector, or a list.}
+  \item{base}{a positive or complex number (or vector), or a list, giving
+    the base with respect to which logarithms are computed.  Defaults to 
+    \eqn{e}=\code{exp(1)}.}
   }
 \description{
   \code{log} computes logarithms, by default natural logarithms, 
@@ -47,7 +48,9 @@ expm1(x)
 }
 \value{
   A vector of the same length as \code{x} containing the transformed
-  values.  \code{log(0)} gives \code{-Inf}, and \code{log(x)} for
+  values, or if \code{x} (or \code{base}) is a list, a recursively
+  computed result, as described in \code{\link{Listops}}.
+  \code{log(0)} gives \code{-Inf}, and \code{log(x)} for
   negative values of \code{x} is \code{NaN}.  \code{exp(-Inf)} is \code{0}.
 
   For complex inputs to the log functions, the value is a complex number
@@ -102,6 +105,8 @@ expm1(x)
   Springer. (for \code{logb}.)
 }
 \seealso{
+  \code{\link{Listops}} for behaviour when applied to a list.
+
   \code{\link{Trig}},
   \code{\link{sqrt}},
   \code{\link{Arithmetic}}.

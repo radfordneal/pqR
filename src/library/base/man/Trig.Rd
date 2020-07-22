@@ -1,6 +1,7 @@
 % File src/library/base/man/Trig.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright (c) 2020 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Trig}
@@ -28,7 +29,7 @@ atan(x)
 atan2(y, x)
 }
 \arguments{
-   \item{x, y}{numeric or complex vectors.}
+   \item{x, y}{numeric or complex vectors, or lists.}
 }
 \details{
   The arc-tangent of two arguments \code{atan2(y, x)} returns the angle
@@ -41,6 +42,8 @@ atan2(y, x)
   All except \code{atan2} are \link{internal generic} \link{primitive}
   functions: methods can be defined for them individually or via the
   \code{\link[=S3groupGeneric]{Math}} group generic.
+
+  These functions can be applied to lists as described in \code{\link{Listops}}.
 }
 \section{Complex values}{
    For the inverse trigonometric functions, branch cuts are defined as in
@@ -62,6 +65,9 @@ atan2(y, x)
   All except \code{atan2} are S4 generic functions: methods can be defined
   for them individually or via the
   \code{\link[=S4groupGeneric]{Math}} group generic.
+}
+\seealso{
+  \code{\link{Listops}} for behaviour when applied to a list.
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)

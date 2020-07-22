@@ -1,6 +1,6 @@
 % File src/library/base/man/Gradient.Rd
 % pqR : A pretty quick version of R
-% Copyright (C) 2018, 2019 by Radford M. Neal
+% Copyright (C) 2018, 2019, 2020 by Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{Gradient}
@@ -347,6 +347,11 @@ variables.  Note that this is the same form as would be obtained if the
 values of these variables were combined into a named list which was then
 used as a single variable in the \code{with gradient} or \code{track gradient}
 construct (see the example below).
+}
+
+\seealso{
+\code{\link{Listops}}, which documents arithmetic on lists, which is
+useful in conjunction with automatic differentiation (see the last example).
 }
 
 \examples{

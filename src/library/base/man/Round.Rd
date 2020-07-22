@@ -1,6 +1,7 @@
 % File src/library/base/man/Round.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2009 R Core Team
+% Modifications for pqR Copyright (c) 2020 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Round}
@@ -38,12 +39,12 @@ signif(x, digits = 6)
   number of significant digits.
 }
 \arguments{
-  \item{x}{a numeric vector.  Or, for \code{round} and \code{signif}, a
-    complex vector.}
+  \item{x}{a numeric vector, or, for \code{round} and \code{signif}, a
+    complex vector, or a list.}
   
-  \item{digits}{integer indicating the number of decimal places
-    (\code{round}) or significant digits (\code{signif}) to be used.
-    Negative values are allowed (see \sQuote{Details}).}
+  \item{digits}{integer (or vector) indicating the number of decimal places
+    (\code{round}) or significant digits (\code{signif}) to be used, or a
+    list. Negative values are allowed (see \sQuote{Details}).}
 
   \item{\dots}{arguments to be passed to methods.}
 }
@@ -51,6 +52,8 @@ signif(x, digits = 6)
   These are generic functions: methods can be defined for them
   individually or via the \code{\link[=S3groupGeneric]{Math}} group
   generic.
+
+  These functions can be applied to lists as described in \code{\link{Listops}}.
 
   Note that for rounding off a 5, the IEC 60559 standard is expected to
   be used, \sQuote{\emph{go to the even digit}}.
@@ -88,6 +91,8 @@ signif(x, digits = 6)
   \emph{The New S Language}.  Wadsworth & Brooks/Cole.
 }
 \seealso{
+  \code{\link{Listops}} for behaviour when applied to a list.
+
   \code{\link{as.integer}}.
 }
 \examples{
