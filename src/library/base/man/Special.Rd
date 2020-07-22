@@ -1,6 +1,7 @@
 % File src/library/base/man/Special.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2020 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Special}
@@ -43,7 +44,9 @@ lfactorial(x)
 }
 \arguments{
   \item{a, b}{non-negative numeric vectors.}
-  \item{x, n}{numeric vectors.}
+  \item{x, n}{numeric vectors, or lists for \code{gamma}, \code{lgamma},
+              \code{digamma}, \code{trigamma}, \code{factorial}, and
+              \code{lfactorial}.}
   \item{k, deriv}{integer vectors.}
 }
 \details{
@@ -72,6 +75,11 @@ lfactorial(x)
 
   The functions \code{digamma} and \code{trigamma} return the first and second
   derivatives of the logarithm of the gamma function.
+
+  The \code{gamma}, \code{lgamma}, \code{digamma}, \code{trigamma},
+  \code{factorial}, and \code{lfactorial} functions may be applied to
+  lists, as described in \code{\link{Listops}}.
+
   \code{psigamma(x, deriv)} (\code{deriv >= 0}) computes the
   \code{deriv}-th derivative of \eqn{\psi(x)}.
   \deqn{\code{digamma(x)} = \psi(x) = \frac{d}{dx}\ln\Gamma(x) =
@@ -120,7 +128,11 @@ lfactorial(x)
   Chapter 6: Gamma and Related Functions.
 }
 \seealso{
-  \code{\link{Arithmetic}} for simple, \code{\link{sqrt}} for
+  \code{\link{Listops}} for behaviour of functions applied to a list.
+
+  \code{\link{Arithmetic}} for simple operations.
+
+  \code{\link{sqrt}} for
   miscellaneous mathematical functions and \code{\link{Bessel}} for the
   real Bessel functions.
 

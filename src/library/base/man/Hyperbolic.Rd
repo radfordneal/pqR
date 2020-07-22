@@ -1,6 +1,7 @@
 % File src/library/base/man/Hyperbolic.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright (c) 2020 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Hyperbolic}
@@ -26,12 +27,14 @@ atanh(x)
   etc).
 }
 \arguments{
-   \item{x}{a numeric or complex vector}
+   \item{x}{a numeric or complex vector, or a list}
 }
 \details{
    These are \link{internal generic} \link{primitive} functions: methods
    can be defined for them individually or via the
    \code{\link[=S3groupGeneric]{Math}} group generic.
+
+  These functions can be applied to lists as described in \code{\link{Listops}}.
 
    Branch cuts are consistent with the inverse trigonometric functions
    \code{asin} \emph{et seq}, and agree with those defined in Abramowitz
@@ -45,6 +48,8 @@ atanh(x)
   \code{\link[=S4groupGeneric]{Math}} group generic.
 }
 \seealso{
+  \code{\link{Listops}} for behaviour when applied to a list.
+
   The trigonometric functions, \code{\link{cos}}, \code{\link{sin}},
   \code{\link{tan}}, and their inverses
   \code{\link{acos}}, \code{\link{asin}}, \code{\link{atan}}.

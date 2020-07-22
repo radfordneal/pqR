@@ -1,7 +1,7 @@
 % File src/library/base/man/Arithmetic.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
-% Modifications for pqR Copyright (c) 2014, 2016, 2017, 2019 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2014, 2016, 2017, 2019, 2020 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Arithmetic}
@@ -31,11 +31,13 @@ x \%/\% y
 \concept{division}
 \description{
   These binary operators perform arithmetic on numeric or complex vectors
-  (or objects which can be coerced to them).
+  (or objects which can be coerced to them). They can also be applied
+  to lists, with the operation done recursively on elements.
 }
 \arguments{
   \item{x, y}{numeric or complex vectors or objects which can be
-    coerced to such, or other objects for which methods have been written.}
+    coerced to such, or lists, or other objects for which methods have 
+    been written.}
 }
 \details{
   These unary and binary arithmetic operators are generic functions: 
@@ -43,8 +45,9 @@ x \%/\% y
   \code{\link[=S3groupGeneric]{Ops}} group generic function.  (See
   \code{\link[=S3groupGeneric]{Ops}} for how dispatch is computed.)
 
-  If applied to arrays the result will be an array if this is sensible
-  (for example it will not if the recycling rule has been invoked).
+  They can be applied to lists as described in \code{\link{Listops}}.
+
+  If applied to arrays the result will be an array if this is sensible.
 
   Logical vectors will be coerced to integer or numeric vectors,
   \code{FALSE} having value zero and \code{TRUE} having value one.

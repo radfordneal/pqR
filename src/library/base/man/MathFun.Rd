@@ -1,6 +1,7 @@
 % File src/library/base/man/Math.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2020 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{MathFun}
@@ -17,7 +18,7 @@ sqrt(x)
   such as C or Fortran.
 }
 \arguments{
-  \item{x}{a numeric or \code{\link{complex}} vector or array.}
+  \item{x}{a numeric or \code{\link{complex}} vector or array, or a list.}
 }
 \details{
   These are \link{internal generic} \link{primitive} functions: methods
@@ -25,6 +26,8 @@ sqrt(x)
   \code{\link[=S3groupGeneric]{Math}} group generic.  For complex
   arguments (and the default method), \code{z}, \code{abs(z) ==
   \link{Mod}(z)} and \code{sqrt(z) == z^0.5}.
+
+  These functions can be applied to lists as described in \code{\link{Listops}}.
 
   \code{abs(x)} returns an \code{\link{integer}} vector when \code{x} is
   \code{integer} or \code{\link{logical}}.
@@ -34,7 +37,11 @@ sqrt(x)
   \code{\link[=S4groupGeneric]{Math}} group generic.
 }
 \seealso{
-  \code{\link{Arithmetic}} for simple, \code{\link{log}} for logarithmic,
+  \code{\link{Listops}} for behaviour when applied to a list.
+
+  \code{\link{Arithmetic}} for simple operations.
+
+  \code{\link{log}} for logarithmic,
   \code{\link{sin}} for trigonometric, and \code{\link{Special}} for
   special mathematical functions.
 
