@@ -102,7 +102,7 @@ with gradient (x=7)                 # Gradients are correctly handled (for
 net <- function (params, X)   # Compute the outputs of a network with 
     params$bias_out +         #   parameters 'params' on the rows of X
       tanh (params$bias_hid + 
-            X %*% params$in_hid) %*% params$hid_out
+            X \%*\% params$in_hid) \%*\% params$hid_out
 
 train <- function (params, X, y, r, n)  # Train for n iterations with
 {                                       #   learning rate r on data X, y
@@ -125,7 +125,7 @@ initial_params <-                # Set initial parameter values randomly
   list (in_hid = matrix (rnorm (2*N_hid, 0, 0.1), 2, N_hid),
         bias_hid = rnorm (N_hid, 0, 0.1),
         hid_out = rnorm (N_hid, 0, 0.1),
-        bias_out = 0)
+        bias_out = mean(y))      # ... except initial output bias is mean y
 
 trained_params <- train (initial_params, X, y, 0.01, 10)
 }

@@ -1216,6 +1216,10 @@ finer points relating to vectorized operations will be discussed in
 @ref{Elementary arithmetic operations}.
 @c FIXME insert reference
 
+In pqR, elementary operators and basic mathematical functions can also be
+applied to lists, with the result computed recursively on the list
+elements.
+
 To access individual elements of an atomic vector, one generally uses
 the @code{x[i]} construction.
 
