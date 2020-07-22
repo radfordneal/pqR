@@ -699,7 +699,7 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
 //R_inspect(pos);
         if (JACOBIAN_TYPE(pos) & SCALED_JACOBIAN) {
 
-            if (! JACOBIAN_TYPE(pos) & DIAGONAL_JACOBIAN) abort();
+            if (! (JACOBIAN_TYPE(pos) & DIAGONAL_JACOBIAN)) abort();
 
             double *p = REAL(pos);
             R_len_t pl = LENGTH(pos);
@@ -1862,7 +1862,8 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
    a list) is with respect to.
 
    Names are added to lists to match those in 'value' or 'idg'.  A 'dim'
-   attribute is added for Jacobian matrices with more than one column. */
+   attribute is added for Jacobian matrices unless the number of rows
+   or number of columns is one. */
 
 static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
 {
@@ -1929,7 +1930,7 @@ REprintf("--\n"); R_inspect(idg);
                 return R_ScalarRealZero;
             res = allocVector (REALSXP, (R_len_t) Jlen);
             memset (REAL(res), 0, Jlen * sizeof(double));
-            if (gvars != 1) {
+            if (gvars != 1 && vlen != 1) {
                 PROTECT(res);
                 SEXP dim = allocVector (INTSXP, 2);
                 INTEGER(dim)[0] = vlen;
@@ -1976,7 +1977,7 @@ REprintf("--\n"); R_inspect(idg);
 
         res = expand_to_full_jacobian (grad);
 
-        if (gvars != 1) {
+        if (gvars != 1 && vlen != 1) {
             PROTECT(res);
             SEXP dim = allocVector (INTSXP, 2);
             INTEGER(dim)[0] = vlen;
