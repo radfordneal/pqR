@@ -319,19 +319,18 @@ attribute by \code{with gradient} will be a scalar real if this
 variable has a scalar real value and the expression this is the gradient of 
 also has a scalar real value.
 
-When the variable is scalar, but the expression is a real vector (or
-matrix, or array) of length greater than one, the gradient will be a
-vector of the same length.  When the variable is a vector (or matrix,
-or array) of length greater than one, the gradient will be a matrix
+When the variable and the expression for which the gradient is found
+are both vectors not of length one, the gradient will be a matrix
 (referred to as the "Jacobian" matrix) whose number of columns equals
 the length of the variable's value, and whose number of rows equals
-the length of the expression's value.  Note that \code{as.matrix} can
-be used to convert a numeric gradient value to always be a
-matrix, if that is desired.  Note also that any \code{dim} attribute for
-the expression or variable is ignored when creating the Jacobian matrix,
-which is always a matrix (not a higher-dimensional array), or a simple
-vector if the Jacobian matrix has only one row or one column.  This can
-of course be changed if desired (see the example below).
+the length of the expression's value.  Any \code{dim} attribute for
+the expression or variable is ignored when creating the Jacobian
+matrix, which is always a matrix (not a higher-dimensional array).
+
+When either the variable or the expression for which the gradient is
+found are vectors of length one (so the Jacobian matrix would have one
+column or one row), the gradient will be a simple vector, rather than
+a matrix. 
 
 The gradient of a list is a list of the same form, with gradients as
 described above replacing the numeric elements.  For a gradient with
