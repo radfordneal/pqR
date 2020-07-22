@@ -62,6 +62,9 @@ expm1(x)
   for them individually or via the \code{\link[=S3groupGeneric]{Math}}
   group generic.
 
+  \code{x} and/or \code{base} may be lists, with the result computed
+  recursively, as described in \code{\link{Listops}}.
+
   \code{log10} and \code{log2} are only convenience wrappers, but logs
   to bases 10 and 2 (whether computed \emph{via} \code{log} or the wrappers)
   will be computed more efficiently and accurately where supported by the OS.

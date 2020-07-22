@@ -176,6 +176,8 @@ x \%/\% y
 
 }
 \seealso{
+  \code{\link{Listops}} for behaviour when applied to a lists.
+
   \code{\link{sqrt}} for miscellaneous and \code{\link{Special}} for special
   mathematical functions.
 
