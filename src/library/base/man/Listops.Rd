@@ -100,15 +100,15 @@ with gradient (x=7)                 # Gradients are correctly handled (for
 # differentiation and arithmetic on lists of parameter vectors/matrices.
 
 net <- function (params, X)   # Compute the outputs of a network with 
-    params$bias_out +         #   parameters 'params' on the rows of X
-      tanh (params$bias_hid + 
-            X \%*\% params$in_hid) \%*\% params$hid_out
+    params$bias_out +         #   parameters 'params' on the rows of 'X'
+      params$hid_out \%*\% 
+        tanh (params$bias_hid + params$in_hid \%*\% t(X))
 
 train <- function (params, X, y, r, n)  # Train for n iterations with
 {                                       #   learning rate r on data X, y
     for (i in 1..n) {
         sq_err <- with gradient (params) sum ((y - net(params,X))^2)
-        cat("Iteration",i,": squared error is",sq_err,"\n")
+        if (i\%\%1000==0) cat("Iteration",i,": squared error",sq_err,"\n")
         params <- 
           params - r * attr(sq_err,"gradient")  # DOES ARITHMETIC ON LISTS
     }
@@ -116,18 +116,26 @@ train <- function (params, X, y, r, n)  # Train for n iterations with
     params
 }
 
-y <- iris[,"Petal.Length"]       # Try to predict petal length in iris data
-X <- as.matrix(iris[,c("Sepal.Length","Sepal.Width")])
-                                 # ... from sepal length and width
-N_hid <- 5                       # ... using a net with 5 hidden units
+y <- log (iris[,"Petal.Length"])       # Try to predict log petal length 
+X <- log (as.matrix(iris[,c("Sepal.Length","Sepal.Width")]))
+                                       # ...from log sepal length and width
+N_hid <- 3                             # ...using a net with 3 hidden units
 
 initial_params <-                # Set initial parameter values randomly
-  list (in_hid = matrix (rnorm (2*N_hid, 0, 0.1), 2, N_hid),
-        bias_hid = rnorm (N_hid, 0, 0.1),
-        hid_out = rnorm (N_hid, 0, 0.1),
+  list (in_hid = matrix (rnorm (2*N_hid, 0, 0.01), N_hid, 2),
+        bias_hid = rnorm (N_hid, 0, 0.01),
+        hid_out = rnorm (N_hid, 0, 0.01),
         bias_out = mean(y))      # ... except initial output bias is mean y
 
-trained_params <- train (initial_params, X, y, 0.01, 10)
+(trained_params <- train (initial_params, X, y, 0.001, 20000))
+
+\dontrun{
+g1 <- seq(1.4,2.1,length=100); g2 <- seq(0.6,1.5,length=100)
+G <- cbind (rep(g1,times=100), rep(g2,each=100))
+P <- matrix (net(trained_params,G), 100, 100)
+contour (g1, g2, P)
+points(X[,1],X[,2],pch=20,col=1+(y>0.4)+(y>1.2)+(y>1.6)+(y>1.8))
+}
 }
 
 \keyword{programming}
