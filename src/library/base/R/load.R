@@ -29,7 +29,8 @@ load <- function (file, envir = parent.frame())
             ## a check while we still know the call to load()
             if(grepl("RD[ABX][12]\r", magic))
                 stop("input has been corrupted, with LF replaced by CR")
-            stop("Use of save versions prior to 2 is no longer allowed")
+            stop(
+          "Loading data saved in formats other than version 2 is not supported")
         }
     } else if (inherits(file, "connection")) {
         con <- if(inherits(file, "gzfile") || inherits(file, "gzcon")) file
