@@ -27,7 +27,7 @@
   \itemize{
   \item A new automatic differentiation facility has been implemented.
         The implementation is not yet polished.  There may be bugs.
-        In some situations, performance is not as good as it should
+        In some situations, performance is not as good as it is expected to
         be in the final version, and is sometimes drastically inefficient.
         This version does, however, demonstrate what the final facility
         will be like.
@@ -46,6 +46,8 @@
         \code{atan2}, \code{round}, and \code{signif} can also be
         applied to lists (as either or both arguments, or as the single
         argument if the second defaults).
+
+        Type \code{help(Listops)} for more information.
   }}
 
   \subsection{BUG FIXES}{
