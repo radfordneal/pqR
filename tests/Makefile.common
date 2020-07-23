@@ -18,7 +18,6 @@ test-src-strict-1 = \
 	$(test-src-gct) \
 	bind.R \
 	gradient.R \
-	listops.R \
 	helpers.R \
 	namedcnt.R \
 	var-lookup.R \
@@ -31,6 +30,7 @@ test-src-strict-1 = \
 	parse-deparse.R
 test-src-strict-auto =
 test-src-sloppy-1 = \
+	listops.R \
 	complex.R \
 	apply.R \
 	print-tests.R \
