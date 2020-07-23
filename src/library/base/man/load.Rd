@@ -19,8 +19,10 @@ load(file, envir = parent.frame())
   \item{envir}{the environment where the data should be loaded.}
 }
 \details{
-  \code{load} can load \R objects saved in the current or any earlier
-  format.  It can read a compressed file (see \code{\link{save}})
+  \code{load} can load \R objects saved in the current pqR
+  format (version 2), but not objects saved in the format used before R 1.4.0,
+  or in the default format of some later R core versions.  It can read 
+  a compressed file (see \code{\link{save}})
   directly from a file or from a suitable connection (including a call
   to \code{\link{url}}).
   
@@ -31,16 +33,10 @@ load(file, envir = parent.frame())
   connection in an altered state (in particular, binary-only), and that
   it needs to be closed explicitly (it will not be garbage-collected).
   
-  Only \R objects saved in the current format (used since \R 1.4.0)
+  Only \R objects saved in the current pqR format (version 2)
   can be read from a connection.  If no input is available on a
   connection a warning will be given, but any input not in the current
   format will result in a error.
-  
-  Loading from an earlier version will give a warning about the
-  \sQuote{magic number}: magic numbers \code{1971:1977} are from \R <
-  0.99.0, and \code{RD[ABX]1} from \R 0.99.0 to \R 1.3.1.  These are all
-  obsolete, and you are strongly recommended to re-save such files in a
-  current format.
 }
 \value{
   A character vector of the names of objects created, invisibly.
