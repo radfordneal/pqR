@@ -1,2 +1,0 @@
-Implement arithmetic operations on lists, dispatching to
-R-level +.list, -.list, etc. functions.

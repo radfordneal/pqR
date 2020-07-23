@@ -1,3 +1,0 @@
-Defines versions of getAttrib that allow faster attribute search when
-it is known that no special processing is needed.  Plus other minor
-speedups.

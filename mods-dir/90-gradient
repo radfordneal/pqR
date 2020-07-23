@@ -1,2 +1,0 @@
-Further implementation of automatic gradient computations, following
-on 89-gradient, which only handled scalars wrt scalars.

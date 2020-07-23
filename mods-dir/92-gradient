@@ -1,2 +1,0 @@
-Modifications to gradient scheme to be more efficient than
-naive forward differentiation.

@@ -1,5 +1,0 @@
-Fixes problem with improper use of DUP=FALSE in 'base' and 'stats',
-
-In particular, fixed findInterval, and also changed it to set HELPER
-to TRUE (except for small instances).
-
