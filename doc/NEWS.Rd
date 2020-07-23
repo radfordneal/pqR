@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{VERSION OF 2020-07-22}{
+\section{VERSION OF 2020-07-23}{
 
   \subsection{INTRODUCTION}{
   \itemize{
