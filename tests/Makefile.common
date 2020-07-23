@@ -17,7 +17,6 @@ test-src-gct = \
 test-src-strict-1 = \
 	$(test-src-gct) \
 	bind.R \
-	gradient.R \
 	listops.R \
 	helpers.R \
 	namedcnt.R \
@@ -33,6 +32,7 @@ test-src-strict-auto =
 test-src-sloppy-1 = \
 	complex.R \
 	apply.R \
+	gradient.R \
 	print-tests.R \
 	lapack.R \
 	datasets.R \
