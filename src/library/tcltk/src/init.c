@@ -19,6 +19,8 @@
 
 #include <R.h>
 #include <Rinternals.h>
+
+#define TCLTK_INIT
 #include "tcltk.h"
 #include <R_ext/Rdynload.h>
 
