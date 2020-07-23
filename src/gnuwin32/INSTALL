@@ -39,7 +39,8 @@ always completely adequate, is as follows:
            won't show them correctly (though the "more" and "cat"
            commands should work).  If you already have a version of R
            installed, you can edit such files with the RGui or RStudio
-           editor.
+           editor.  On recent Windows 10 versions, notepad should also
+           work.  You can also look at files with a web browser.
 
   1) Obtain TeX from somewhere, such as http://miktex.org.  (If you
      get the basic MiKTeX version, note that it will at times ask
@@ -90,9 +91,9 @@ always completely adequate, is as follows:
 
   7) Change into the pqR-YYYY-MM-DD directory, and in it untar the 
      win-extra file you downloaded in step (4), as follows (or 
-     similarly for 64 rather than 32):
+     similarly for 32 rather than 64):
 
-         tar -xvf <path-to-where-you-put>\pqR-win-extras-32.tar.gz
+         tar -xvf <path-to-where-you-put>\pqR-win-extras-64.tar.gz
 
   8) Change to the src\gnuwin32 sub-directory of the source/build
      directory.
@@ -107,15 +108,16 @@ always completely adequate, is as follows:
 
      MkRules.dist32 should work for any Windows XP, Vista, 7, 8, or 10
      system (in conjunction with pqR-win-extras-32), but on 64-bit systems
-     will be slower and more memory-limited than using MkRules.dist64.
-     See the comments in the MkRules files for more details.
+     will be slower and more memory-limited than using MkRules.dist64
+     (with pqR-win-extras-64).  See the comments in the MkRules files for
+     more details.
 
  10) Possibly edit the options (eg, whether helper threads or
      compressed pointers are enabled) at the start of fixed\h\config.h
      (in src\gnuwin32).
 
- 11) If you want the base and recommended packages to be byte compiled,
-     enter the commands
+ 11) (OPTIONAL) If you want the base and recommended packages to be byte 
+     compiled, enter the commands
 
           set R_NO_BASE_COMPILE=FALSE
           set R_PKG_BYTECOMPILE=TRUE
@@ -140,7 +142,9 @@ always completely adequate, is as follows:
 
      The first "make" command will take a while.  You can monitor the
      make.out files from another console window to see how things are
-     progressing during the build.
+     progressing during the build.  Or you can view the file in a web
+     browser (eg, firefox), and refresh the page to see how the build
+     is progressing.
 
  13) You should now be able to run Rterm.exe, by typing the command
      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where

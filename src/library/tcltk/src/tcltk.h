@@ -35,6 +35,9 @@ void Tcl_unix_setup(void);
 
 /* Globals exported from  ./tcltk.c : */
 
+#ifndef TCLTK_INIT
+extern
+#endif
 Tcl_Interp *RTcl_interp;      /* Interpreter for this application. */
 void tcltk_init(int *);
 
